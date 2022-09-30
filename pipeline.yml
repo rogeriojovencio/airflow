@@ -1,0 +1,47 @@
+trigger:
+  branches:
+    include:
+      - main
+      - pre-release
+
+pr:
+  branches:
+    include:
+      - main
+      - pre-release
+
+stages:
+  - stage: ci
+    displayName: Code Validation
+    jobs:
+      - job: airflow_ci
+        displayName: Airflow CI
+        pool:
+          vmImage: ubuntu-20.04
+        steps:
+          - task: CopyFiles@2
+            inputs:
+              Contents: '**'
+              TargetFolder: '$(Build.ArtifactStagingDirectory)'
+          - task: UsePythonVersion@0
+            name: use_python_3_8
+            displayName: Use Python 3.8
+            inputs:
+              versionSpec: "3.8"
+              addToPath: true
+              architecture: x64
+          - task: Bash@3
+            name: assert_code_style_black
+            displayName: Assert code style with Black
+            inputs:
+              targetType: inline
+              workingDirectory: dags
+              script: |
+                pip3 install --upgrade pip && \
+                pip3 install black==22.3.0 && \
+                black --check .
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'airflow-dags'
+              publishLocation: 'Container'       
